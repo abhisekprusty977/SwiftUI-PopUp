@@ -15,7 +15,10 @@ struct PopupDemoView: View {
     var body: some View {
         ZStack {
             
-            Color.white.ignoresSafeArea()
+            // Background
+            Color.white
+                .ignoresSafeArea()
+                .blur(radius: (showPopup || showSecondPopup) ? 5 : 0)
             
             // Main Button
             Button(action: {
@@ -32,107 +35,148 @@ struct PopupDemoView: View {
                     .padding(.horizontal, 20)
             }
             
+            // Overlay for tap outside dismiss
+            if showPopup || showSecondPopup {
+                Color.black.opacity(0.2)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation {
+                            showPopup = false
+                            showSecondPopup = false
+                        }
+                    }
+            }
+            
             // FIRST POPUP
             if showPopup {
-                VStack {
-                    Spacer()
-                    
+                BottomSheet {
                     VStack(spacing: 15) {
-                        
-                        Text("Nature is the art of God.In every walk with nature, one receives far more.Look deep into nature, and you understand everything better.Nature always wears the colors of the spirit.Adopt the pace of nature: her secret is patience.")
+                        Text("Nature is the art of God.")
+                        Text("In every walk with nature, one receives far more.")
+                        Text("Look deep into nature, and you understand everything better.")
+                        Text("Nature always wears the colors of the spirit.")
+                        Text("Adopt the pace of nature: her secret is patience.")
                         
                         HStack(spacing: 15) {
                             
-                            // Cancel
                             Button {
                                 withAnimation {
                                     showPopup = false
                                 }
                             } label: {
-                                Text("Cancel")
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.3))
-                                    .cornerRadius(10)
+                                popupButton(title: "Cancel")
                             }
                             
-                            // Agree → Open Second Popup
                             Button {
                                 withAnimation {
                                     showPopup = false
                                     showSecondPopup = true
                                 }
                             } label: {
-                                Text("Agree")
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.3))
-                                    .cornerRadius(10)
+                                popupButton(title: "Agree")
                             }
                         }
                     }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(20)
-                    .shadow(radius: 10)
-                    .padding()
+                } onDismiss: {
+                    showPopup = false
                 }
                 .transition(.move(edge: .bottom))
             }
             
             // SECOND POPUP
             if showSecondPopup {
-                VStack {
-                    Spacer()
-                    
+                BottomSheet {
                     VStack(spacing: 15) {
-                        
-                        Text("Do you want to continue further...This will proceed to the next step.")
+                        Text("Do you want to continue further?")
+                        Text("This will proceed to the next step.")
                         
                         HStack(spacing: 15) {
                             
-                            // Cancel
                             Button {
                                 withAnimation {
                                     showSecondPopup = false
                                 }
                             } label: {
-                                Text("Cancel")
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.3))
-                                    .cornerRadius(10)
+                                popupButton(title: "Cancel")
                             }
                             
-                            // Proceed
                             Button {
                                 withAnimation {
                                     showSecondPopup = false
                                 }
-                                // Yaha aage ka action add kar sakte ho
                             } label: {
-                                Text("Proceed")
-                                    .foregroundColor(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.3))
-                                    .cornerRadius(10)
+                                popupButton(title: "Proceed")
                             }
                         }
                     }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(20)
-                    .shadow(radius: 10)
-                    .padding()
+                } onDismiss: {
+                    showSecondPopup = false
                 }
                 .transition(.move(edge: .bottom))
             }
         }
     }
+}
+
+// MARK: - Reusable Bottom Sheet
+struct BottomSheet<Content: View>: View {
+    
+    let content: Content
+    var onDismiss: () -> Void
+    
+    @GestureState private var dragOffset: CGFloat = 0
+    
+    init(@ViewBuilder content: () -> Content, onDismiss: @escaping () -> Void) {
+        self.content = content()
+        self.onDismiss = onDismiss
+    }
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            VStack {
+                // Drag Indicator
+                Capsule()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 8)
+                
+                content
+                    .padding()
+            }
+            .background(Color.white)
+            .cornerRadius(20)
+            .offset(y: dragOffset)
+            .gesture(
+                DragGesture()
+                    .updating($dragOffset) { value, state, _ in
+                        if value.translation.height > 0 {
+                            state = value.translation.height
+                        }
+                    }
+                    .onEnded { value in
+                        if value.translation.height > 120 {
+                            withAnimation {
+                                onDismiss()
+                            }
+                        }
+                    }
+            )
+            .shadow(radius: 10)
+            .padding()
+        }
+    }
+}
+
+// MARK: - Button Style
+func popupButton(title: String) -> some View {
+    Text(title)
+        .foregroundColor(.black)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.gray.opacity(0.3))
+        .cornerRadius(10)
 }
 
 #Preview {
